@@ -1,34 +1,33 @@
 const db = require('../config/sqlite');
 
 class Item {
-  static create(userId, title, description = null, status = 'pending') {
-    const statement = db.prepare(
-      'INSERT INTO items (user_id, title, description, status) VALUES (?, ?, ?, ?)'
+  static async create(userId, title, description = null, status = 'pending') {
+    const result = await db.run(
+      'INSERT INTO items (user_id, title, description, status) VALUES (?, ?, ?, ?)',
+      [userId, title, description, status]
     );
-    const result = statement.run(userId, title, description, status);
-    return { insertId: result.lastInsertRowid };
+    return { insertId: result.lastID };
   }
 
-  static findById(id) {
-    const statement = db.prepare('SELECT * FROM items WHERE id = ?');
-    return statement.get(id);
+  static async findById(id) {
+    return await db.get('SELECT * FROM items WHERE id = ?', [id]);
   }
 
-  static getByUserId(userId, limit = 10, offset = 0) {
-    const statement = db.prepare(
-      'SELECT * FROM items WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
+  static async getByUserId(userId, limit = 10, offset = 0) {
+    return await db.all(
+      'SELECT * FROM items WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+      [userId, limit, offset]
     );
-    return statement.all(userId, limit, offset);
   }
 
-  static getAll(limit = 10, offset = 0) {
-    const statement = db.prepare(
-      'SELECT * FROM items ORDER BY created_at DESC LIMIT ? OFFSET ?'
+  static async getAll(limit = 10, offset = 0) {
+    return await db.all(
+      'SELECT * FROM items ORDER BY created_at DESC LIMIT ? OFFSET ?',
+      [limit, offset]
     );
-    return statement.all(limit, offset);
   }
 
-  static update(id, updates) {
+  static async update(id, updates) {
     const allowed = ['title', 'description', 'status'];
     const fields = [];
     const values = [];
@@ -43,13 +42,14 @@ class Item {
     if (fields.length === 0) return null;
 
     values.push(id);
-    const statement = db.prepare(`UPDATE items SET ${fields.join(', ')} WHERE id = ?`);
-    return statement.run(...values);
+    return await db.run(
+      `UPDATE items SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      values
+    );
   }
 
-  static delete(id) {
-    const statement = db.prepare('DELETE FROM items WHERE id = ?');
-    return statement.run(id);
+  static async delete(id) {
+    return await db.run('DELETE FROM items WHERE id = ?', [id]);
   }
 }
 
